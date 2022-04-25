@@ -4,12 +4,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Clibgit2",
+    name: "static-libgit2",
     platforms: [.iOS(.v13), .macOS(.v11)],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
-            name: "Clibgit2",
+            name: "static-libgit2",
             targets: ["Clibgit2", "LinkerConfigurator"]
         ),
     ],
