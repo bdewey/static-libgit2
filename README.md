@@ -26,8 +26,8 @@ If you want to use `static-libgit2` in another package (say, to expose some cool
 
 ```swift
     dependencies: [
-      .package(url: "https://github.com/bdewey/static-libgit2", branch: "main"),
-    ]
+      .package(url: "https://github.com/bdewey/static-libgit2", from: "0.1.0"),
+    ],
 ```
 
 # What's Included
