@@ -3,8 +3,13 @@
 export REPO_ROOT=`pwd`
 export DEPENDENCIES_ROOT="$REPO_ROOT/dependencies"
 
+set -e
+
 rm -rf $DEPENDENCIES_ROOT
 mkdir $DEPENDENCIES_ROOT
+rm -rf $REPO_ROOT/*.xcframework
+rm -rf $REPO_ROOT/install*
+mkdir $REPO_ROOT/install
 
 # There are limitations in `xcodebuild` command that disallow maccatalyst and maccatalyst-arm64
 # to be used simultaneously: Doing that and we will get an error
@@ -105,7 +110,7 @@ function build_libpcre() {
 
 ### Build openssl for a given platform
 function build_openssl() {
-	setup_variables $1 install
+	setup_variables $1 install-openssl
 
 	# It is better to remove and redownload the source since building make the source code directory dirty!
 	rm -rf openssl-3.0.0
@@ -135,8 +140,8 @@ function build_openssl() {
 	esac
 
 	# See https://wiki.openssl.org/index.php/Compilation_and_Installation
-	./Configure --prefix=$REPO_ROOT/install/$PLATFORM \
-		--openssldir=$REPO_ROOT/install/$PLATFORM \
+	./Configure --prefix=$REPO_ROOT/install-openssl/$PLATFORM \
+		--openssldir=$REPO_ROOT/install-openssl/$PLATFORM \
 		$TARGET_OS no-shared no-dso no-hw no-engine >/dev/null 2>/dev/null
 
 	make >/dev/null 2>/dev/null
@@ -156,13 +161,13 @@ function build_libssh2() {
 	rm -rf build && mkdir build && cd build
 
 	CMAKE_ARGS+=(-DCRYPTO_BACKEND=OpenSSL \
-		-DOPENSSL_ROOT_DIR=$REPO_ROOT/install/$PLATFORM \
+		-DOPENSSL_ROOT_DIR=$REPO_ROOT/install-openssl/$PLATFORM \
 		-DBUILD_EXAMPLES=OFF \
 		-DBUILD_TESTING=OFF)
 
-	cmake "${CMAKE_ARGS[@]}" .. >/dev/null 2>/dev/null
+	cmake "${CMAKE_ARGS[@]}" .. 
 
-	cmake --build . --target install >/dev/null 2>/dev/null
+	cmake --build . --target install 
 }
 
 ### Build libgit2 for a single platform (given as the first and only argument)
@@ -183,7 +188,7 @@ function build_libgit2() {
     # See libgit2/cmake/FindPkgLibraries.cmake to understand how libgit2 looks for libssh2
     # Basically, setting LIBSSH2_FOUND forces SSH support and since we are building static library,
     # we only need the headers.
-    CMAKE_ARGS+=(-DOPENSSL_ROOT_DIR=$REPO_ROOT/install/$PLATFORM \
+    CMAKE_ARGS+=(-DOPENSSL_ROOT_DIR=$REPO_ROOT/install-openssl/$PLATFORM \
         -DUSE_SSH=ON \
         -DLIBSSH2_FOUND=YES \
         -DLIBSSH2_INCLUDE_DIRS=$REPO_ROOT/install-libssh2/$PLATFORM/include)
@@ -235,13 +240,14 @@ for p in ${AVAILABLE_PLATFORMS[@]}; do
 	# Merge all static libs as libgit2.a since xcodebuild doesn't allow specifying multiple .a
 	# TODO: Can I get rid of this when I have N different frameworks?
 	cd $REPO_ROOT/install/$p
+	echo Merging `ls lib/*.a`
 	libtool -static -o libgit2.a lib/*.a
 	rm lib/*.a
 	mv libgit2.a lib
 done
 
 build_xcframework libssh2 install-libssh2 Clibssh2 ${AVAILABLE_PLATFORMS[@]}
+build_xcframework libssl install-openssl Copenssl ${AVAILABLE_PLATFORMS[@]}
 build_xcframework libgit2 install Clibgit2 ${AVAILABLE_PLATFORMS[@]}
 cd $REPO_ROOT
 copy_modulemap
-zip -rq Clibgit2.xcframework.zip Clibgit2.xcframework/

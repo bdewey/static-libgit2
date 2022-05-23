@@ -12,6 +12,7 @@ let package = Package(
       targets: [
         "Clibgit2",
         "Clibssh2",
+        "Copenssl",
         "LinkerConfigurator"
       ]
     ),
@@ -23,6 +24,7 @@ let package = Package(
   targets: [
     .binaryTarget(name: "Clibgit2", path: "Clibgit2.xcframework"),
     .binaryTarget(name: "Clibssh2", path: "Clibssh2.xcframework"),
+    .binaryTarget(name: "Copenssl", path: "Copenssl.xcframework"),
     .target(name: "LinkerConfigurator", linkerSettings: [
       .linkedLibrary("z"),
       .linkedLibrary("iconv")
