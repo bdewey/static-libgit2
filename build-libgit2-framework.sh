@@ -18,8 +18,7 @@ mkdir $DEPENDENCIES_ROOT
 # maccatalyst-arm64 macosx macosx-arm64
 
 if [[ $(arch) == 'arm64' ]]; then
-# AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
-AVAILABLE_PLATFORMS=(iphoneos)
+AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
 else
 AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst)
 fi
