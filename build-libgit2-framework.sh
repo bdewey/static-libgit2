@@ -237,13 +237,12 @@ for p in ${AVAILABLE_PLATFORMS[@]}; do
 	build_libssh2 $p
 	build_libgit2 $p
 
-	# Merge all static libs as libgit2.a since xcodebuild doesn't allow specifying multiple .a
-	# TODO: Can I get rid of this when I have N different frameworks?
-	cd $REPO_ROOT/install/$p
+	# openssl creates multiple *.a files, and we can't put those in a single xcframework?
+	cd $REPO_ROOT/install-openssl/$p
 	echo Merging `ls lib/*.a`
-	libtool -static -o libgit2.a lib/*.a
+	libtool -static -o libssl.a lib/*.a
 	rm lib/*.a
-	mv libgit2.a lib
+	mv libssl.a lib
 done
 
 build_xcframework libssh2 install-libssh2 Clibssh2 ${AVAILABLE_PLATFORMS[@]}
