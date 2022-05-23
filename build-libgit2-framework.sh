@@ -227,7 +227,7 @@ function copy_modulemap() {
 for p in ${AVAILABLE_PLATFORMS[@]}; do
 	echo "Build libraries for $p"
 	
-	build_libpcre $p
+	# build_libpcre $p
 	build_openssl $p
 	build_libssh2 $p
 	build_libgit2 $p
