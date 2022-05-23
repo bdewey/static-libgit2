@@ -1,3 +1,4 @@
 install
+install-libssh2
 dependencies
 .swiftpm

@@ -18,13 +18,14 @@ mkdir $DEPENDENCIES_ROOT
 # maccatalyst-arm64 macosx macosx-arm64
 
 if [[ $(arch) == 'arm64' ]]; then
-AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
+# AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
+AVAILABLE_PLATFORMS=(iphoneos)
 else
 AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst)
 fi
 
 ### Setup common environment variables to run CMake for a given platform
-### Usage:      setup_variables PLATFORM
+### Usage:      setup_variables PLATFORM INSTALLDIR
 ### where PLATFORM is the platform to build for and should be one of
 ###    iphoneos            (implicitly arm64)
 ###    iphonesimulator     (implicitly x86_64)
@@ -45,7 +46,7 @@ function setup_variables() {
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_C_COMPILER_WORKS=ON \
 		-DCMAKE_CXX_COMPILER_WORKS=ON \
-		-DCMAKE_INSTALL_PREFIX=$REPO_ROOT/install/$PLATFORM)
+		-DCMAKE_INSTALL_PREFIX=$REPO_ROOT/$2/$PLATFORM)
 
 	case $PLATFORM in
 		"iphoneos")
@@ -86,7 +87,7 @@ function setup_variables() {
 
 ### Build libpcre for a given platform
 function build_libpcre() {
-	setup_variables $1
+	setup_variables $1 install
 
 	rm -rf pcre-8.45
 	git clone https://github.com/light-tech/PCRE.git pcre-8.45
@@ -105,7 +106,7 @@ function build_libpcre() {
 
 ### Build openssl for a given platform
 function build_openssl() {
-	setup_variables $1
+	setup_variables $1 install
 
 	# It is better to remove and redownload the source since building make the source code directory dirty!
 	rm -rf openssl-3.0.0
@@ -146,7 +147,7 @@ function build_openssl() {
 
 ### Build libssh2 for a given platform (assume openssl was built)
 function build_libssh2() {
-	setup_variables $1
+	setup_variables $1 install-libssh2
 
 	rm -rf libssh2-1.10.0
 	test -f libssh2-1.10.0.tar.gz || wget -q https://www.libssh2.org/download/libssh2-1.10.0.tar.gz
@@ -169,7 +170,7 @@ function build_libssh2() {
 ### See @setup_variables for the list of available platform names
 ### Assume openssl and libssh2 was built
 function build_libgit2() {
-    setup_variables $1
+    setup_variables $1 install
 
     rm -rf libgit2-1.3.0
     test -f v1.3.0.zip || wget -q https://github.com/libgit2/libgit2/archive/refs/tags/v1.3.0.zip
@@ -186,7 +187,7 @@ function build_libgit2() {
     CMAKE_ARGS+=(-DOPENSSL_ROOT_DIR=$REPO_ROOT/install/$PLATFORM \
         -DUSE_SSH=ON \
         -DLIBSSH2_FOUND=YES \
-        -DLIBSSH2_INCLUDE_DIRS=$REPO_ROOT/install/$PLATFORM/include)
+        -DLIBSSH2_INCLUDE_DIRS=$REPO_ROOT/install-libssh2/$PLATFORM/include)
 
     cmake "${CMAKE_ARGS[@]}" .. >/dev/null 2>/dev/null
 
@@ -196,18 +197,20 @@ function build_libgit2() {
 ### Create xcframework for a given library
 function build_xcframework() {
 	local FWNAME=$1
-	shift
+	local INSTALLDIR=$2
+	local XCFRAMEWORKNAME=$3
+	shift 3
 	local PLATFORMS=( "$@" )
 	local FRAMEWORKS_ARGS=()
 
 	echo "Building" $FWNAME "XCFramework containing" ${PLATFORMS[@]}
 
 	for p in ${PLATFORMS[@]}; do
-		FRAMEWORKS_ARGS+=("-library" "install/$p/$FWNAME.a" "-headers" "install/$p/include")
+		FRAMEWORKS_ARGS+=("-library" "$INSTALLDIR/$p/lib/$FWNAME.a" "-headers" "$INSTALLDIR/$p/include")
 	done
 
 	cd $REPO_ROOT
-	xcodebuild -create-xcframework ${FRAMEWORKS_ARGS[@]} -output Clibgit2.xcframework
+	xcodebuild -create-xcframework ${FRAMEWORKS_ARGS[@]} -output $XCFRAMEWORKNAME.xcframework
 }
 
 ### Copy SwiftGit2's module.modulemap to libgit2.xcframework/*/Headers
@@ -231,11 +234,15 @@ for p in ${AVAILABLE_PLATFORMS[@]}; do
 	build_libgit2 $p
 
 	# Merge all static libs as libgit2.a since xcodebuild doesn't allow specifying multiple .a
+	# TODO: Can I get rid of this when I have N different frameworks?
 	cd $REPO_ROOT/install/$p
 	libtool -static -o libgit2.a lib/*.a
+	rm lib/*.a
+	mv libgit2.a lib
 done
 
-build_xcframework libgit2 ${AVAILABLE_PLATFORMS[@]}
+build_xcframework libssh2 install-libssh2 Clibssh2 ${AVAILABLE_PLATFORMS[@]}
+build_xcframework libgit2 install Clibgit2 ${AVAILABLE_PLATFORMS[@]}
 cd $REPO_ROOT
 copy_modulemap
 zip -rq Clibgit2.xcframework.zip Clibgit2.xcframework/
