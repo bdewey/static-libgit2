@@ -122,11 +122,11 @@ function build_openssl() {
 	case $PLATFORM in
 		"iphoneos")
 			TARGET_OS=ios64-cross
-			export CFLAGS="-isysroot $SYSROOT -arch $ARCH";;
+			export CFLAGS="-isysroot $SYSROOT -arch $ARCH -mios-version-min=13.0";;
 
 		"iphonesimulator")
 			TARGET_OS=iossimulator-xcrun
-			export CFLAGS="-isysroot $SYSROOT";;
+			export CFLAGS="-isysroot $SYSROOT -miphonesimulator-version-min=13.0";;
 
 		"maccatalyst"|"maccatalyst-arm64")
 			TARGET_OS=darwin64-$ARCH-cc
