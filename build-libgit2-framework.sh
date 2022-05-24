@@ -3,8 +3,13 @@
 export REPO_ROOT=`pwd`
 export DEPENDENCIES_ROOT="$REPO_ROOT/dependencies"
 
+set -e
+
 rm -rf $DEPENDENCIES_ROOT
 mkdir $DEPENDENCIES_ROOT
+rm -rf $REPO_ROOT/*.xcframework
+rm -rf $REPO_ROOT/install*
+mkdir $REPO_ROOT/install
 
 # There are limitations in `xcodebuild` command that disallow maccatalyst and maccatalyst-arm64
 # to be used simultaneously: Doing that and we will get an error
@@ -24,7 +29,7 @@ AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst)
 fi
 
 ### Setup common environment variables to run CMake for a given platform
-### Usage:      setup_variables PLATFORM
+### Usage:      setup_variables PLATFORM INSTALLDIR
 ### where PLATFORM is the platform to build for and should be one of
 ###    iphoneos            (implicitly arm64)
 ###    iphonesimulator     (implicitly x86_64)
@@ -45,7 +50,8 @@ function setup_variables() {
 		-DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_C_COMPILER_WORKS=ON \
 		-DCMAKE_CXX_COMPILER_WORKS=ON \
-		-DCMAKE_INSTALL_PREFIX=$REPO_ROOT/install/$PLATFORM)
+		-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+		-DCMAKE_INSTALL_PREFIX=$REPO_ROOT/$2/$PLATFORM)
 
 	case $PLATFORM in
 		"iphoneos")
@@ -86,7 +92,7 @@ function setup_variables() {
 
 ### Build libpcre for a given platform
 function build_libpcre() {
-	setup_variables $1
+	setup_variables $1 install
 
 	rm -rf pcre-8.45
 	git clone https://github.com/light-tech/PCRE.git pcre-8.45
@@ -105,7 +111,7 @@ function build_libpcre() {
 
 ### Build openssl for a given platform
 function build_openssl() {
-	setup_variables $1
+	setup_variables $1 install-openssl
 
 	# It is better to remove and redownload the source since building make the source code directory dirty!
 	rm -rf openssl-3.0.0
@@ -116,11 +122,11 @@ function build_openssl() {
 	case $PLATFORM in
 		"iphoneos")
 			TARGET_OS=ios64-cross
-			export CFLAGS="-isysroot $SYSROOT -arch $ARCH";;
+			export CFLAGS="-isysroot $SYSROOT -arch $ARCH -mios-version-min=13.0";;
 
 		"iphonesimulator")
 			TARGET_OS=iossimulator-xcrun
-			export CFLAGS="-isysroot $SYSROOT";;
+			export CFLAGS="-isysroot $SYSROOT -miphonesimulator-version-min=13.0";;
 
 		"maccatalyst"|"maccatalyst-arm64")
 			TARGET_OS=darwin64-$ARCH-cc
@@ -135,8 +141,8 @@ function build_openssl() {
 	esac
 
 	# See https://wiki.openssl.org/index.php/Compilation_and_Installation
-	./Configure --prefix=$REPO_ROOT/install/$PLATFORM \
-		--openssldir=$REPO_ROOT/install/$PLATFORM \
+	./Configure --prefix=$REPO_ROOT/install-openssl/$PLATFORM \
+		--openssldir=$REPO_ROOT/install-openssl/$PLATFORM \
 		$TARGET_OS no-shared no-dso no-hw no-engine >/dev/null 2>/dev/null
 
 	make >/dev/null 2>/dev/null
@@ -146,7 +152,7 @@ function build_openssl() {
 
 ### Build libssh2 for a given platform (assume openssl was built)
 function build_libssh2() {
-	setup_variables $1
+	setup_variables $1 install-libssh2
 
 	rm -rf libssh2-1.10.0
 	test -f libssh2-1.10.0.tar.gz || wget -q https://www.libssh2.org/download/libssh2-1.10.0.tar.gz
@@ -156,20 +162,20 @@ function build_libssh2() {
 	rm -rf build && mkdir build && cd build
 
 	CMAKE_ARGS+=(-DCRYPTO_BACKEND=OpenSSL \
-		-DOPENSSL_ROOT_DIR=$REPO_ROOT/install/$PLATFORM \
+		-DOPENSSL_ROOT_DIR=$REPO_ROOT/install-openssl/$PLATFORM \
 		-DBUILD_EXAMPLES=OFF \
 		-DBUILD_TESTING=OFF)
 
-	cmake "${CMAKE_ARGS[@]}" .. >/dev/null 2>/dev/null
+	cmake "${CMAKE_ARGS[@]}" .. 
 
-	cmake --build . --target install >/dev/null 2>/dev/null
+	cmake --build . --target install 
 }
 
 ### Build libgit2 for a single platform (given as the first and only argument)
 ### See @setup_variables for the list of available platform names
 ### Assume openssl and libssh2 was built
 function build_libgit2() {
-    setup_variables $1
+    setup_variables $1 install
 
     rm -rf libgit2-1.3.0
     test -f v1.3.0.zip || wget -q https://github.com/libgit2/libgit2/archive/refs/tags/v1.3.0.zip
@@ -183,10 +189,10 @@ function build_libgit2() {
     # See libgit2/cmake/FindPkgLibraries.cmake to understand how libgit2 looks for libssh2
     # Basically, setting LIBSSH2_FOUND forces SSH support and since we are building static library,
     # we only need the headers.
-    CMAKE_ARGS+=(-DOPENSSL_ROOT_DIR=$REPO_ROOT/install/$PLATFORM \
+    CMAKE_ARGS+=(-DOPENSSL_ROOT_DIR=$REPO_ROOT/install-openssl/$PLATFORM \
         -DUSE_SSH=ON \
         -DLIBSSH2_FOUND=YES \
-        -DLIBSSH2_INCLUDE_DIRS=$REPO_ROOT/install/$PLATFORM/include)
+        -DLIBSSH2_INCLUDE_DIRS=$REPO_ROOT/install-libssh2/$PLATFORM/include)
 
     cmake "${CMAKE_ARGS[@]}" .. >/dev/null 2>/dev/null
 
@@ -196,18 +202,20 @@ function build_libgit2() {
 ### Create xcframework for a given library
 function build_xcframework() {
 	local FWNAME=$1
-	shift
+	local INSTALLDIR=$2
+	local XCFRAMEWORKNAME=$3
+	shift 3
 	local PLATFORMS=( "$@" )
 	local FRAMEWORKS_ARGS=()
 
 	echo "Building" $FWNAME "XCFramework containing" ${PLATFORMS[@]}
 
 	for p in ${PLATFORMS[@]}; do
-		FRAMEWORKS_ARGS+=("-library" "install/$p/$FWNAME.a" "-headers" "install/$p/include")
+		FRAMEWORKS_ARGS+=("-library" "$INSTALLDIR/$p/lib/$FWNAME.a" "-headers" "$INSTALLDIR/$p/include")
 	done
 
 	cd $REPO_ROOT
-	xcodebuild -create-xcframework ${FRAMEWORKS_ARGS[@]} -output Clibgit2.xcframework
+	xcodebuild -create-xcframework ${FRAMEWORKS_ARGS[@]} -output $XCFRAMEWORKNAME.xcframework
 }
 
 ### Copy SwiftGit2's module.modulemap to libgit2.xcframework/*/Headers
@@ -225,17 +233,20 @@ function copy_modulemap() {
 for p in ${AVAILABLE_PLATFORMS[@]}; do
 	echo "Build libraries for $p"
 	
-	build_libpcre $p
+	# build_libpcre $p
 	build_openssl $p
 	build_libssh2 $p
 	build_libgit2 $p
 
-	# Merge all static libs as libgit2.a since xcodebuild doesn't allow specifying multiple .a
-	cd $REPO_ROOT/install/$p
-	libtool -static -o libgit2.a lib/*.a
+	# Put all of the generated *.a files into a single *.a file that will be in our framework
+	cd $REPO_ROOT
+	libtool -static -o libgit2.a install-openssl/$p/lib/*.a install/$p/lib/*.a install-libssh2/$p/lib/*.a
+	cp libgit2.a install/$p/lib
+	rm libgit2.a
 done
 
-build_xcframework libgit2 ${AVAILABLE_PLATFORMS[@]}
+# build_xcframework libssh2 install-libssh2 Clibssh2 ${AVAILABLE_PLATFORMS[@]}
+# build_xcframework libssl install-openssl Copenssl ${AVAILABLE_PLATFORMS[@]}
+build_xcframework libgit2 install Clibgit2 ${AVAILABLE_PLATFORMS[@]}
 cd $REPO_ROOT
 copy_modulemap
-zip -rq Clibgit2.xcframework.zip Clibgit2.xcframework/
