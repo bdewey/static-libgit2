@@ -242,6 +242,7 @@ for p in ${AVAILABLE_PLATFORMS[@]}; do
 	cd $REPO_ROOT
 	libtool -static -o libgit2.a install-openssl/$p/lib/*.a install/$p/lib/*.a install-libssh2/$p/lib/*.a
 	cp libgit2.a install/$p/lib
+	rm libgit2.a
 done
 
 # build_xcframework libssh2 install-libssh2 Clibssh2 ${AVAILABLE_PLATFORMS[@]}
