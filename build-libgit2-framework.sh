@@ -184,18 +184,10 @@ function build_libgit2() {
 
     rm -rf build && mkdir build && cd build
 
-    CMAKE_ARGS+=(-DBUILD_CLAR=NO)
+    CMAKE_ARGS+=(-DBUILD_CLAR=NO -DCMAKE_PREFIX_PATH="$REPO_ROOT/install-libssh2/$PLATFORM;$REPO_ROOT/install-openssl/$PLATFORM")
 
-    # See libgit2/cmake/FindPkgLibraries.cmake to understand how libgit2 looks for libssh2
-    # Basically, setting LIBSSH2_FOUND forces SSH support and since we are building static library,
-    # we only need the headers.
-    CMAKE_ARGS+=(-DOPENSSL_ROOT_DIR=$REPO_ROOT/install-openssl/$PLATFORM \
-        -DUSE_SSH=ON \
-        -DLIBSSH2_FOUND=YES \
-		-DCMAKE_PREFIX_PATH=$REPO_ROOT/install-libssh2/$PLATFORM:$REPO_ROOT/install-openssl/$PLATFORM
-        -DLIBSSH2_INCLUDE_DIRS=$REPO_ROOT/install-libssh2/$PLATFORM/include)
-
-    cmake "${CMAKE_ARGS[@]}" .. >/dev/null 2>/dev/null
+	echo "cmake ${CMAKE_ARGS[@]} .."
+    cmake "${CMAKE_ARGS[@]}" ..
 
     cmake --build . --target install >/dev/null 2>/dev/null
 }
