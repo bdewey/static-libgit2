@@ -184,7 +184,7 @@ function build_libgit2() {
 
     rm -rf build && mkdir build && cd build
 
-    CMAKE_ARGS+=(-DBUILD_CLAR=NO -DCMAKE_PREFIX_PATH="$REPO_ROOT/install-libssh2/$PLATFORM;$REPO_ROOT/install-openssl/$PLATFORM")
+    CMAKE_ARGS+=(-DBUILD_CLAR=NO -DGIT_SSH_MEMORY_CREDENTIALS=1 -DCMAKE_PREFIX_PATH="$REPO_ROOT/install-libssh2/$PLATFORM;$REPO_ROOT/install-openssl/$PLATFORM")
 
 	echo "cmake ${CMAKE_ARGS[@]} .."
     cmake "${CMAKE_ARGS[@]}" ..
