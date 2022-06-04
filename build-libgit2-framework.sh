@@ -192,6 +192,7 @@ function build_libgit2() {
     CMAKE_ARGS+=(-DOPENSSL_ROOT_DIR=$REPO_ROOT/install-openssl/$PLATFORM \
         -DUSE_SSH=ON \
         -DLIBSSH2_FOUND=YES \
+		-DCMAKE_PREFIX_PATH=$REPO_ROOT/install-libssh2/$PLATFORM:$REPO_ROOT/install-openssl/$PLATFORM
         -DLIBSSH2_INCLUDE_DIRS=$REPO_ROOT/install-libssh2/$PLATFORM/include)
 
     cmake "${CMAKE_ARGS[@]}" .. >/dev/null 2>/dev/null
