@@ -51,7 +51,7 @@ function setup_variables() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_C_COMPILER_WORKS=ON \
         -DCMAKE_CXX_COMPILER_WORKS=ON \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=12.4 \
         -DCMAKE_INSTALL_PREFIX=$REPO_ROOT/$2/$PLATFORM)
 
     case $PLATFORM in
