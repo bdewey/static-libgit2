@@ -23,7 +23,8 @@ mkdir $REPO_ROOT/install
 # maccatalyst-arm64 macosx macosx-arm64
 
 if [[ $(arch) == 'arm64' ]]; then
-AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
+AVAILABLE_PLATFORMS=(macosx)
+# AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
 else
 AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst)
 fi
