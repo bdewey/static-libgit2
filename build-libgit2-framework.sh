@@ -11,22 +11,7 @@ rm -rf $REPO_ROOT/*.xcframework
 rm -rf $REPO_ROOT/install*
 mkdir $REPO_ROOT/install
 
-# There are limitations in `xcodebuild` command that disallow maccatalyst and maccatalyst-arm64
-# to be used simultaneously: Doing that and we will get an error
-#
-#   Both ios-x86_64-maccatalyst and ios-arm64-maccatalyst represent two equivalent library definitions.
-#
-# To provide binary for both, `lipo` is probably needed.
-# Likewise, `maccatalyst` and `macosx` cannot be used together. So unfortunately for now, one will
-# needs multiple xcframeworks for x86_64-based and ARM-based Mac development computer.
-
-# maccatalyst-arm64 macosx macosx-arm64
-
-if [[ $(arch) == 'arm64' ]]; then
-AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
-else
-AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst)
-fi
+AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64 macosx-arm64 macosx)
 
 ### Setup common environment variables to run CMake for a given platform
 ### Usage:      setup_variables PLATFORM INSTALLDIR
@@ -50,7 +35,7 @@ function setup_variables() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_C_COMPILER_WORKS=ON \
         -DCMAKE_CXX_COMPILER_WORKS=ON \
-        -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=12.4 \
         -DCMAKE_INSTALL_PREFIX=$REPO_ROOT/$2/$PLATFORM)
 
     case $PLATFORM in
@@ -77,6 +62,7 @@ function setup_variables() {
 
         "macosx")
             ARCH=x86_64
+            CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES=$ARCH)
             SYSROOT=`xcodebuild -version -sdk macosx Path`;;
 
         "macosx-arm64")
@@ -140,6 +126,8 @@ function build_openssl() {
             echo "Unsupported or missing platform!";;
     esac
 
+    echo "$PLATFORM $ARCH $TARGET_OS"
+
     # See https://wiki.openssl.org/index.php/Compilation_and_Installation
     ./Configure --prefix=$REPO_ROOT/install-openssl/$PLATFORM \
         --openssldir=$REPO_ROOT/install-openssl/$PLATFORM \
@@ -200,8 +188,13 @@ function build_xcframework() {
     local INSTALLDIR=$2
     local XCFRAMEWORKNAME=$3
     shift 3
-    local PLATFORMS=( "$@" )
+    local PLATFORMS=( iphoneos iphonesimulator maccatalyst-arm64 )
     local FRAMEWORKS_ARGS=()
+
+    echo "Creating fat binary for macosx"
+    mkdir -p "$INSTALLDIR/macosx-fat/lib"
+    lipo "$INSTALLDIR/macosx/lib/$FWNAME.a" "$INSTALLDIR/macosx-arm64/lib/$FWNAME.a" -create -output "$INSTALLDIR/macosx-fat/lib/$FWNAME.a"
+    FRAMEWORKS_ARGS+=("-library" "$INSTALLDIR/macosx-fat/lib/$FWNAME.a" "-headers" "$INSTALLDIR/macosx/include")
 
     echo "Building" $FWNAME "XCFramework containing" ${PLATFORMS[@]}
 
@@ -235,13 +228,11 @@ for p in ${AVAILABLE_PLATFORMS[@]}; do
 
     # Put all of the generated *.a files into a single *.a file that will be in our framework
     cd $REPO_ROOT
-    libtool -static -o libgit2.a install-openssl/$p/lib/*.a install/$p/lib/*.a install-libssh2/$p/lib/*.a
-    cp libgit2.a install/$p/lib
-    rm libgit2.a
+    libtool -v -static -o libgit2_all.a install-openssl/$p/lib/*.a install/$p/lib/*.a install-libssh2/$p/lib/*.a
+    cp libgit2_all.a install/$p/lib
+    rm libgit2_all.a
 done
 
-# build_xcframework libssh2 install-libssh2 Clibssh2 ${AVAILABLE_PLATFORMS[@]}
-# build_xcframework libssl install-openssl Copenssl ${AVAILABLE_PLATFORMS[@]}
-build_xcframework libgit2 install Clibgit2 ${AVAILABLE_PLATFORMS[@]}
+build_xcframework libgit2_all install Clibgit2
 cd $REPO_ROOT
 copy_modulemap
