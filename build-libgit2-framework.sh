@@ -23,7 +23,7 @@ mkdir $REPO_ROOT/install
 # maccatalyst-arm64 macosx macosx-arm64
 
 if [[ $(arch) == 'arm64' ]]; then
-AVAILABLE_PLATFORMS=(macosx)
+AVAILABLE_PLATFORMS=(macosx-arm64)
 # AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64)
 else
 AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst)
@@ -236,13 +236,13 @@ for p in ${AVAILABLE_PLATFORMS[@]}; do
 
     # Put all of the generated *.a files into a single *.a file that will be in our framework
     cd $REPO_ROOT
-    libtool -static -o libgit2.a install-openssl/$p/lib/*.a install/$p/lib/*.a install-libssh2/$p/lib/*.a
-    cp libgit2.a install/$p/lib
-    rm libgit2.a
+    libtool -v -static -o libgit2_all.a install-openssl/$p/lib/*.a install/$p/lib/*.a install-libssh2/$p/lib/*.a
+    cp libgit2_all.a install/$p/lib
+    rm libgit2_all.a
 done
 
 # build_xcframework libssh2 install-libssh2 Clibssh2 ${AVAILABLE_PLATFORMS[@]}
 # build_xcframework libssl install-openssl Copenssl ${AVAILABLE_PLATFORMS[@]}
-build_xcframework libgit2 install Clibgit2 ${AVAILABLE_PLATFORMS[@]}
+build_xcframework libgit2_all install Clibgit2 ${AVAILABLE_PLATFORMS[@]}
 cd $REPO_ROOT
 copy_modulemap
