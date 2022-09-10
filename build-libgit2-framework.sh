@@ -11,7 +11,7 @@ rm -rf $REPO_ROOT/*.xcframework
 rm -rf $REPO_ROOT/install*
 mkdir $REPO_ROOT/install
 
-AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst-arm64 macosx-arm64 macosx)
+AVAILABLE_PLATFORMS=(iphoneos iphonesimulator maccatalyst maccatalyst-arm64 macosx-arm64 macosx)
 
 ### Setup common environment variables to run CMake for a given platform
 ### Usage:      setup_variables PLATFORM INSTALLDIR
@@ -53,12 +53,12 @@ function setup_variables() {
         "maccatalyst")
             ARCH=x86_64
             SYSROOT=`xcodebuild -version -sdk macosx Path`
-            CMAKE_ARGS+=(-DCMAKE_C_FLAGS=-target\ $ARCH-apple-ios14.1-macabi);;
+            CMAKE_ARGS+=(-DCMAKE_C_FLAGS=-target\ $ARCH-apple-ios14.1-macabi -DCMAKE_OSX_ARCHITECTURES=$ARCH);;
 
         "maccatalyst-arm64")
             ARCH=arm64
             SYSROOT=`xcodebuild -version -sdk macosx Path`
-            CMAKE_ARGS+=(-DCMAKE_C_FLAGS=-target\ $ARCH-apple-ios14.1-macabi);;
+            CMAKE_ARGS+=(-DCMAKE_C_FLAGS=-target\ $ARCH-apple-ios14.1-macabi -DCMAKE_OSX_ARCHITECTURES=$ARCH);;
 
         "macosx")
             ARCH=x86_64
@@ -188,13 +188,18 @@ function build_xcframework() {
     local INSTALLDIR=$2
     local XCFRAMEWORKNAME=$3
     shift 3
-    local PLATFORMS=( iphoneos iphonesimulator maccatalyst-arm64 )
+    local PLATFORMS=( iphoneos iphonesimulator )
     local FRAMEWORKS_ARGS=()
 
     echo "Creating fat binary for macosx"
     mkdir -p "$INSTALLDIR/macosx-fat/lib"
     lipo "$INSTALLDIR/macosx/lib/$FWNAME.a" "$INSTALLDIR/macosx-arm64/lib/$FWNAME.a" -create -output "$INSTALLDIR/macosx-fat/lib/$FWNAME.a"
     FRAMEWORKS_ARGS+=("-library" "$INSTALLDIR/macosx-fat/lib/$FWNAME.a" "-headers" "$INSTALLDIR/macosx/include")
+
+    echo "Creating fat binary for maccatalyst"
+    mkdir -p "$INSTALLDIR/maccatalyst-fat/lib"
+    lipo "$INSTALLDIR/maccatalyst/lib/$FWNAME.a" "$INSTALLDIR/maccatalyst-arm64/lib/$FWNAME.a" -create -output "$INSTALLDIR/maccatalyst-fat/lib/$FWNAME.a"
+    FRAMEWORKS_ARGS+=("-library" "$INSTALLDIR/maccatalyst-fat/lib/$FWNAME.a" "-headers" "$INSTALLDIR/maccatalyst/include")
 
     echo "Building" $FWNAME "XCFramework containing" ${PLATFORMS[@]}
 
