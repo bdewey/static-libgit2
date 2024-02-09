@@ -6,6 +6,17 @@ This repository is heavily indebted to https://github.com/light-tech/LibGit2-On-
 
 ## Usage in an Application
 
+Important Notes:  
+
+1. OpenSSL currently doesn't support VisionOS (no maintainer). Until this does, we inject our own config file - 20-apple.conf (based on https://github.com/passepartoutvpn/openssl-apple) which adds support for VisionOS.
+
+2. To build, currently there is a slight issue with CMake in that it builds xros binaries instead of xrsimulator binaries.  
+This is currently (Feb 2024) under investigation but a temporary workaround is to comment out the following lines in Apple-Clang.cmake (e.g. /opt/homebrew/Cellar/cmake/3.28.1/share/cmake/Modules/Platform/Apple-Clang.cmake):
+```
+  elseif(_CMAKE_OSX_SYSROOT_PATH MATCHES "/XRSimulator")  
+    set(CMAKE_${lang}_OSX_DEPLOYMENT_TARGET_FLAG "-mtargetos=xros")
+```
+
 If you are writing an iOS or Mac app that needs access to `libgit2`, you can simply add this package to your project via Swift Package Manager. The `libgit2` C Language APIs are provided through the `Clibgit2` module, so you can access them with `import Clibgit2`. For example, the following SwiftUI view will show the `libgit2` version:
 
 ```swift
