@@ -36,9 +36,9 @@ If you want to use `static-libgit2` in another package (say, to expose some cool
 
 | Library | Version |
 | ------- | ------- |
-| libgit2 | 1.3.0   |
-| openssl | 3.0.0   |
-| libssh2 | 1.10.0  |
+| libgit2 | 1.9.1   |
+| openssl | 3.6.0   |
+| libssh2 | 1.11.1  |
 
 This build recipe and the original version of the build script comes from the insightful project https://github.com/light-tech/LibGit2-On-iOS. 
 

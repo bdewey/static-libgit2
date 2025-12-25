@@ -28,4 +28,13 @@ module Clibgit2 {
 		export *
 		module * { export * }
 	}
+
+	// Expose libssh2 headers
+	explicit module libssh2 {
+		header "libssh2.h"
+		header "libssh2_sftp.h"
+		header "libssh2_publickey.h"
+
+		export *
+	}
 }

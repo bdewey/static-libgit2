@@ -14,7 +14,7 @@
 
 /**
  * @file git2/status.h
- * @brief Git file status routines
+ * @brief Status indicates how a user has changed the working directory and index
  * @defgroup git_status Git file status routines
  * @ingroup Git
  * @{
@@ -48,17 +48,16 @@ typedef enum {
 	GIT_STATUS_WT_UNREADABLE    = (1u << 12),
 
 	GIT_STATUS_IGNORED          = (1u << 14),
-	GIT_STATUS_CONFLICTED       = (1u << 15),
+	GIT_STATUS_CONFLICTED       = (1u << 15)
 } git_status_t;
 
 /**
  * Function pointer to receive status on individual files
  *
- * `path` is the relative path to the file from the root of the repository.
- *
- * `status_flags` is a combination of `git_status_t` values that apply.
- *
- * `payload` is the value you passed to the foreach function as payload.
+ * @param path is the path to the file
+ * @param status_flags the `git_status_t` values for file's status
+ * @param payload the user-specified payload to the foreach function
+ * @return 0 on success, or a negative number on failure
  */
 typedef int GIT_CALLBACK(git_status_cb)(
 	const char *path, unsigned int status_flags, void *payload);
@@ -87,7 +86,7 @@ typedef enum {
 	 * Only gives status based on index to working directory comparison,
 	 * not comparing the index to the HEAD.
 	 */
-	GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
+	GIT_STATUS_SHOW_WORKDIR_ONLY = 2
 } git_status_show_t;
 
 /**
@@ -204,9 +203,10 @@ typedef enum {
 	 * Unreadable files will be detected and given the status
 	 * untracked instead of unreadable.
 	 */
-	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15),
+	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15)
 } git_status_opt_t;
 
+/** Default `git_status_opt_t` values */
 #define GIT_STATUS_OPT_DEFAULTS \
 	(GIT_STATUS_OPT_INCLUDE_IGNORED | \
 	GIT_STATUS_OPT_INCLUDE_UNTRACKED | \
@@ -227,13 +227,16 @@ typedef struct {
 
 	/**
 	 * The `show` value is one of the `git_status_show_t` constants that
-	 * control which files to scan and in what order.
+	 * control which files to scan and in what order. The default is
+	 * `GIT_STATUS_SHOW_INDEX_AND_WORKDIR`.
 	 */
 	git_status_show_t show;
 
 	/**
 	 * The `flags` value is an OR'ed combination of the
-	 * `git_status_opt_t` values above.
+	 * `git_status_opt_t` values above. The default is
+	 * `GIT_STATUS_OPT_DEFAULTS`, which matches git's default
+	 * behavior.
 	 */
 	unsigned int      flags;
 
@@ -250,9 +253,18 @@ typedef struct {
 	 * working directory and index; defaults to HEAD.
 	 */
 	git_tree          *baseline;
+
+	/**
+	 * Threshold above which similar files will be considered renames.
+	 * This is equivalent to the -M option. Defaults to 50.
+	 */
+	uint16_t          rename_threshold;
 } git_status_options;
 
+/** Current version for the `git_status_options` structure */
 #define GIT_STATUS_OPTIONS_VERSION 1
+
+/** Static constructor for `git_status_options` */
 #define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
 
 /**
@@ -440,4 +452,5 @@ GIT_EXTERN(int) git_status_should_ignore(
 
 /** @} */
 GIT_END_DECL
+
 #endif

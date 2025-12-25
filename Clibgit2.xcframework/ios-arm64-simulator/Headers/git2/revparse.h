@@ -12,8 +12,8 @@
 
 /**
  * @file git2/revparse.h
- * @brief Git revision parsing routines
- * @defgroup git_revparse Git revision parsing routines
+ * @brief Parse the textual revision information
+ * @defgroup git_revparse Parse the textual revision information
  * @ingroup Git
  * @{
  */
@@ -74,7 +74,7 @@ typedef enum {
 	/** The spec targeted a range of commits. */
 	GIT_REVSPEC_RANGE          = 1 << 1,
 	/** The spec used the '...' operator, which invokes special semantics. */
-	GIT_REVSPEC_MERGE_BASE     = 1 << 2,
+	GIT_REVSPEC_MERGE_BASE     = 1 << 2
 } git_revspec_t;
 
 /**
@@ -107,7 +107,7 @@ GIT_EXTERN(int) git_revparse(
 	git_repository *repo,
 	const char *spec);
 
-
 /** @} */
 GIT_END_DECL
+
 #endif

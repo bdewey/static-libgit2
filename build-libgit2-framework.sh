@@ -100,10 +100,10 @@ function build_openssl() {
     setup_variables $1 install-openssl
 
     # It is better to remove and redownload the source since building make the source code directory dirty!
-    rm -rf openssl-3.0.0
-    test -f openssl-3.0.0.tar.gz || wget -q https://www.openssl.org/source/openssl-3.0.0.tar.gz
-    tar xzf openssl-3.0.0.tar.gz
-    cd openssl-3.0.0
+    rm -rf openssl-3.6.0
+    test -f openssl-3.6.0.tar.gz || wget -q https://www.openssl.org/source/openssl-3.6.0.tar.gz
+    tar xzf openssl-3.6.0.tar.gz
+    cd openssl-3.6.0
 
     case $PLATFORM in
         "iphoneos")
@@ -142,10 +142,10 @@ function build_openssl() {
 function build_libssh2() {
     setup_variables $1 install-libssh2
 
-    rm -rf libssh2-1.10.0
-    test -f libssh2-1.10.0.tar.gz || wget -q https://www.libssh2.org/download/libssh2-1.10.0.tar.gz
-    tar xzf libssh2-1.10.0.tar.gz
-    cd libssh2-1.10.0
+    rm -rf libssh2-1.11.1
+    test -f libssh2-1.11.1.tar.gz || wget -q https://www.libssh2.org/download/libssh2-1.11.1.tar.gz
+    tar xzf libssh2-1.11.1.tar.gz
+    cd libssh2-1.11.1
 
     rm -rf build && mkdir build && cd build
 
@@ -165,16 +165,14 @@ function build_libssh2() {
 function build_libgit2() {
     setup_variables $1 install
 
-    rm -rf libgit2-1.3.0
-    test -f v1.3.0.zip || wget -q https://github.com/libgit2/libgit2/archive/refs/tags/v1.3.0.zip
-    ditto -x -k --sequesterRsrc --rsrc v1.3.0.zip ./
-    cd libgit2-1.3.0
+    rm -rf libgit2-1.9.1
+    test -f v1.9.1.zip || wget -q https://github.com/libgit2/libgit2/archive/refs/tags/v1.9.1.zip
+    ditto -x -k --sequesterRsrc --rsrc v1.9.1.zip ./
+    cd libgit2-1.9.1
 
     rm -rf build && mkdir build && cd build
 
-    # The CMake function that determines if `libssh2_userauth_publickey_frommemory` is defined doesn't
-    # work when everything is statically linked. Manually override GIT_SSH_MEMORY_CREDENTIALS.
-    CMAKE_ARGS+=(-DBUILD_CLAR=NO -DGIT_SSH_MEMORY_CREDENTIALS=1 -DCMAKE_PREFIX_PATH="$REPO_ROOT/install-libssh2/$PLATFORM;$REPO_ROOT/install-openssl/$PLATFORM")
+    CMAKE_ARGS+=(-DBUILD_TESTS=OFF -DUSE_SSH=libssh2 -DCMAKE_PREFIX_PATH="$REPO_ROOT/install-libssh2/$PLATFORM;$REPO_ROOT/install-openssl/$PLATFORM")
 
     echo "cmake ${CMAKE_ARGS[@]} .."
     cmake "${CMAKE_ARGS[@]}" ..
@@ -221,6 +219,25 @@ function copy_modulemap() {
     done
 }
 
+### Copy libssh2 headers into Clibgit2.xcframework so Swift can access libssh2 API
+function copy_libssh2_headers() {
+    local FWDIRS=$(find Clibgit2.xcframework -mindepth 1 -maxdepth 1 -type d)
+    for d in ${FWDIRS[@]}; do
+        # Determine source platform from xcframework directory name
+        case $d in
+            *ios-arm64)
+                cp install-libssh2/iphoneos/include/*.h $d/Headers/;;
+            *ios-arm64-simulator)
+                cp install-libssh2/iphonesimulator/include/*.h $d/Headers/;;
+            *ios-arm64_x86_64-maccatalyst)
+                cp install-libssh2/maccatalyst/include/*.h $d/Headers/;;
+            *macos-arm64_x86_64)
+                cp install-libssh2/macosx/include/*.h $d/Headers/;;
+        esac
+        echo "Copied libssh2 headers to $d/Headers/"
+    done
+}
+
 ### Build libgit2 and Clibgit2 frameworks for all available platforms
 
 for p in ${AVAILABLE_PLATFORMS[@]}; do
@@ -241,3 +258,4 @@ done
 build_xcframework libgit2_all install Clibgit2
 cd $REPO_ROOT
 copy_modulemap
+copy_libssh2_headers

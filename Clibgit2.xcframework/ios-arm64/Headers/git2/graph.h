@@ -13,7 +13,7 @@
 
 /**
  * @file git2/graph.h
- * @brief Git graph traversal routines
+ * @brief Graph traversal routines
  * @defgroup git_revwalk Git graph traversal routines
  * @ingroup Git
  * @{
@@ -33,6 +33,7 @@ GIT_BEGIN_DECL
  * @param repo the repository where the commits exist
  * @param local the commit for local
  * @param upstream the commit for upstream
+ * @return 0 or an error code.
  */
 GIT_EXTERN(int) git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo, const git_oid *local, const git_oid *upstream);
 
@@ -60,8 +61,8 @@ GIT_EXTERN(int) git_graph_descendant_of(
  *
  * @param repo the repository where the commits exist
  * @param commit a previously loaded commit
- * @param length the number of commits in the provided `descendant_array`
  * @param descendant_array oids of the commits
+ * @param length the number of commits in the provided `descendant_array`
  * @return 1 if the given commit is an ancestor of any of the given potential
  * descendants, 0 if not, error code otherwise.
  */
@@ -73,4 +74,5 @@ GIT_EXTERN(int) git_graph_reachable_from_any(
 
 /** @} */
 GIT_END_DECL
+
 #endif
